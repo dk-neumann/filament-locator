@@ -15,6 +15,7 @@ const BRIGHTNESS = +process.env.BRIGHTNESS || 150;
 const LIGHT_COLOR = (process.env.LIGHT_COLOR || "filament").replace("#", "");
 
 const INDEX_HTML = path.join(__dirname, "public", "index.html");
+const MAPPER_HTML = path.join(__dirname, "public", "mapper.html");
 
 // ---- Slot map (re-read on each use so a new export takes effect without a restart) ----
 function loadSlots() {
@@ -25,6 +26,28 @@ function loadSlots() {
       location: s.location, rack: s.rack, shelf: s.shelf, position: s.position, start: s.start, end: s.end
     }))
   };
+}
+
+// Saves a slot map from the mapper. The previous map is kept as filament-slots.previous.json.
+function saveSlots(data) {
+  const ok = data && data.version === 2 && Array.isArray(data.slots) && data.slots.length > 0 &&
+    Number.isInteger(data.totalLeds) && data.slots.every(s =>
+      typeof s.location === "string" && Number.isInteger(s.start) && Number.isInteger(s.end) &&
+      s.start >= 0 && s.end >= s.start && s.end < data.totalLeds);
+  if (!ok) throw new Error("That isn't a valid slot map");
+
+  const dir = path.dirname(SLOTS_FILE);
+  if (fs.existsSync(SLOTS_FILE)) fs.copyFileSync(SLOTS_FILE, path.join(dir, "filament-slots.previous.json"));
+  const tmp = SLOTS_FILE + ".tmp";
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2) + "\n");
+  fs.renameSync(tmp, SLOTS_FILE);
+  // Inside Docker this runs as root; give the files to the data folder's owner so they stay editable.
+  try {
+    const { uid, gid } = fs.statSync(dir);
+    for (const f of [SLOTS_FILE, path.join(dir, "filament-slots.previous.json")]) {
+      if (fs.existsSync(f)) fs.chownSync(f, uid, gid);
+    }
+  } catch {}
 }
 
 // ---- WLED ----
@@ -133,9 +156,29 @@ async function check(fn) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   try {
-    if (req.method === "GET" && url.pathname === "/") {
+    if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/mapper")) {
       res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-      return fs.createReadStream(INDEX_HTML).pipe(res);
+      return fs.createReadStream(url.pathname === "/" ? INDEX_HTML : MAPPER_HTML).pipe(res);
+    }
+
+    // ---- Slot mapper support: the stored slot map, and a pass-through to WLED's JSON API ----
+    if (req.method === "GET" && url.pathname === "/api/slots") {
+      if (!fs.existsSync(SLOTS_FILE)) return send(res, 404, { error: "No slot map yet" });
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return fs.createReadStream(SLOTS_FILE).pipe(res);
+    }
+    if (req.method === "POST" && url.pathname === "/api/slots") {
+      saveSlots(await readBody(req));
+      return send(res, 200, { ok: true });
+    }
+    if (req.method === "GET" && url.pathname === "/api/wled/info") {
+      const r = await fetch(`http://${WLED_HOST}/json/info`, { signal: AbortSignal.timeout(4000) });
+      return send(res, r.status, await r.json());
+    }
+    if (req.method === "POST" && url.pathname === "/api/wled/state") {
+      clearTimeout(offTimer);  // don't let a locate's auto-off blank the strip mid-mapping
+      await wled(await readBody(req));
+      return send(res, 200, { ok: true });
     }
     if (req.method === "GET" && url.pathname === "/api/data") {
       const [spools, slotMap] = [await getSpools(), loadSlots()];

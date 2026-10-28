@@ -15,8 +15,9 @@ No dependencies beyond Node 18+. Runs in Docker alongside Spoolman.
 
 - Spoolman running somewhere on your network
 - A WLED controller (tested with a BTF-LIGHTING SP805E) driving WS2812B strips along the shelves
-- A slot map (`filament-slots.json`) made with the companion
-  [Filament Slot Mapper](https://github.com/dk-neumann/filament-slot-mapper), which records which LEDs sit under each slot
+- A slot map (`filament-slots.json`) recording which LEDs sit under each slot. The slot mapper is
+  built in at `/mapper` (see below); it's also available on its own as
+  [Filament Slot Mapper](https://github.com/dk-neumann/filament-slot-mapper)
 
 ## Install
 
@@ -26,14 +27,13 @@ On the machine that runs Docker (e.g. the Raspberry Pi running Spoolman):
 git clone https://github.com/dk-neumann/filament-locator.git
 cd filament-locator
 cp .env.example .env        # then edit .env: set WLED_HOST to your controller's IP
-cp /path/to/your/filament-slots.json data/
 docker compose up -d --build
 ```
 
-Open `http://<docker-host>:7920` in a browser.
+Open `http://<docker-host>:7920` in a browser, and `http://<docker-host>:7920/mapper` to map your racks.
 
-No slot map yet? Copy `data/filament-slots.example.json` to `data/filament-slots.json`
-to try it with a single example rack.
+To try the app before mapping, copy `data/filament-slots.example.json` to
+`data/filament-slots.json` for a single example rack.
 
 ## Settings (`.env`)
 
@@ -48,10 +48,18 @@ to try it with a single example rack.
 
 After changing `.env`, run `docker compose up -d`.
 
-## Updating the slot map
+## Mapping slots
 
-Export a new `filament-slots.json` from the mapper and copy it into `data/`.
-It's re-read on every request, so no restart is needed.
+Open `/mapper`. It talks to WLED through this app (so it works from a tablet with no extra setup)
+and starts from the map the app is using. Mark each shelf's left and right LEDs, check the slots,
+then tap **Save to Filament Locator**. The app uses the new map immediately; the previous one is
+kept as `data/filament-slots.previous.json`.
+
+You can also copy a `filament-slots.json` exported elsewhere into `data/`; it's re-read on every
+request, so no restart is needed.
+
+`public/mapper.html` is a copy of `slot-mapper.html` from the
+[Filament Slot Mapper](https://github.com/dk-neumann/filament-slot-mapper) repository.
 
 ## Updating the app
 

@@ -3,3 +3,4 @@
 data/*.json
 !data/filament-slots.example.json
 node_modules/
+data/*.tmp

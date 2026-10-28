@@ -1,0 +1,694 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Filament Rack Mapper</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --card: #ffffff; --ink: #1d1d1f; --muted: #6b6b72; --line: #e3e1dc;
+    --tile: #f1efea; --tile-hover: #e8e5de; --accent: #2f6fde; --accent-ink: #ffffff;
+    --sel: #ffe7a0; --sel-ink: #3a2c00; --ok: #1f8a4c; --bad: #c0362c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131315; --card: #1d1d20; --ink: #ececef; --muted: #9b9ba3; --line: #313136;
+      --tile: #26262a; --tile-hover: #2f2f34; --accent: #5b8ff0; --accent-ink: #0b1220;
+      --sel: #5c4b12; --sel-ink: #fff3cc; --ok: #4cc47f; --bad: #ff6b5e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { font-size: 22px; margin: 0; }
+  h2 { font-size: 15px; margin: 0 0 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .pill { font-size: 13px; padding: 4px 10px; border-radius: 99px; background: var(--tile); color: var(--muted); }
+  .pill.ok { color: var(--ok); } .pill.bad { color: var(--bad); }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  label { font-size: 13px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; }
+  input[type=text], input[type=number], select { font: inherit; color: var(--ink); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; min-width: 0; }
+  input[type=number] { width: 72px; }
+  input[type=color] { width: 36px; height: 28px; border: none; background: none; padding: 0; }
+  button { font: inherit; font-size: 14px; color: var(--ink); background: var(--tile); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+  button:hover { background: var(--tile-hover); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .cursor-num { font-size: 40px; font-weight: 700; width: 130px; text-align: center; font-variant-numeric: tabular-nums; }
+  .jog button { min-width: 56px; font-weight: 600; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .tabs button.on { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  .layout { background: var(--bg); border-radius: 10px; padding: 10px 12px; margin-bottom: 8px; }
+  .shelf { border-top: 1px solid var(--line); padding: 10px 0; }
+  .shelf:first-of-type { border-top: none; }
+  .shelf-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .shelf-name { font-weight: 700; font-size: 18px; width: 22px; }
+  .dir { font-size: 12px; color: var(--muted); }
+  .edges { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-left: auto; }
+  .edges input { width: 62px; }
+  .edges button { padding: 4px 8px; font-size: 12px; }
+  .slots { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .slot { position: relative; text-align: left; padding: 8px 10px; border-radius: 10px; }
+  .slot b { display: block; font-size: 15px; }
+  .slot span { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .slot .dot { position: absolute; top: 9px; right: 9px; width: 10px; height: 10px; border-radius: 50%; }
+  .slot.sel { background: var(--sel); color: var(--sel-ink); border-color: transparent; }
+  .slot.sel span { color: var(--sel-ink); }
+  .slot.custom b::after { content: " *"; color: var(--accent); }
+  .slot.overlap { outline: 2px solid var(--bad); }
+  .editor .big { font-size: 26px; font-weight: 700; }
+  ol { margin: 0; padding-left: 20px; } li { margin: 3px 0; }
+  .legend { display: inline-flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--muted); }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: -1px; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Filament Rack Mapper</h1>
+    <span id="conn" class="pill">Not connected yet</span>
+  </header>
+
+  <section class="card">
+    <h2>Connection</h2>
+    <div class="row">
+      <label id="hostWrap">WLED host <input type="text" id="host" size="22"></label>
+      <button id="test">Test</button>
+      <label>Total LEDs <input type="number" id="total" min="1" max="2048"></label>
+      <label>Brightness <input type="range" id="bri" min="5" max="255"></label>
+      <label>Cursor <input type="color" id="curColor"></label>
+      <label>Slot <input type="color" id="slotColor"></label>
+      <button id="off">All off</button>
+      <button id="release" title="Unfreeze the strip so WLED effects run again">Give back to WLED</button>
+    </div>
+    <p id="info" class="muted"></p>
+  </section>
+
+  <div class="grid2">
+    <section class="card">
+      <h2>Cursor (single LED)</h2>
+      <div class="row jog">
+        <button data-jog="-10">−10</button>
+        <button data-jog="-1">−1</button>
+        <input type="number" id="cursor" class="cursor-num" min="0">
+        <button data-jog="1">+1</button>
+        <button data-jog="10">+10</button>
+      </div>
+      <p class="muted">Keyboard: ← / → step 1, Shift+← / → step 10, Esc turns everything off. The arrow next to each shelf shows which way LED numbers count up on that shelf.</p>
+    </section>
+
+    <section class="card editor">
+      <h2>Selected slot</h2>
+      <div id="noSel" class="muted">Click a slot below to select it.</div>
+      <div id="selBox" class="hidden">
+        <div class="row" style="justify-content:space-between">
+          <span class="big" id="selName">1-A-1</span>
+          <span class="muted" id="selRange"></span>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <label>Center</label>
+          <button data-sel="c-1">−1</button><button data-sel="c+1">+1</button>
+          <button data-sel="toCursor">Center = cursor</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <label>Width</label>
+          <button data-sel="w-1">−</button><span id="selWidth">3</span><button data-sel="w+1">+</button>
+          <button data-sel="auto">Reset to auto</button>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button data-sel="prev">◀ Prev slot</button><button data-sel="next">Next slot ▶</button>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px">
+      <h2 style="margin:0">Racks</h2>
+      <div class="row">
+        <label>Racks in use
+          <select id="rackCount"><option>1</option><option>2</option><option>3</option></select></label>
+        <label>Default slot width <input type="number" id="defWidth" min="1" max="20"></label>
+        <button id="showAll" class="primary">Light all slots</button>
+      </div>
+    </div>
+    <div class="tabs" id="tabs"></div>
+    <div class="layout row" id="layout"></div>
+    <div class="legend" id="legend"></div>
+    <div id="rack" style="margin-top:8px"></div>
+    <p class="muted">* = hand-adjusted slot. Red outline = overlaps another slot.</p>
+  </section>
+
+  <section class="card">
+    <h2>Save / load</h2>
+    <div class="row">
+      <button id="saveServer" class="primary hidden">Save to Filament Locator</button>
+      <button id="export">Export slots (JSON)</button>
+      <button id="importBtn">Import…</button>
+      <button id="loadSaved">Load saved map from PC</button>
+      <input type="file" id="importFile" accept=".json,application/json" class="hidden">
+      <button id="reset">Reset everything</button>
+    </div>
+    <p class="muted" id="saveNote">Your work also auto-saves in this browser. Export gives you the file the Filament Locator app uses.</p>
+  </section>
+
+  <section class="card">
+    <h2>How to map</h2>
+    <ol>
+      <li>Click <b>Test</b> to confirm the page can reach WLED.</li>
+      <li>Pick a rack tab. Check its <b>first LED</b>, where its strip starts, and which way the first shelf runs, then click <b>Apply layout guess</b>.</li>
+      <li>For each shelf, step the cursor to the LED at the <b>left end</b> of the usable shelf and press <b>L = cursor</b>; do the same for the <b>right end</b> with <b>R = cursor</b>.</li>
+      <li>The 5 slots are spaced evenly between those edges. Click <b>Light shelf</b> to check them (1 red, 2 green, 3 blue, 4 amber, 5 purple).</li>
+      <li>Adjust the <b>default width</b> until slots are the right size, or fine-tune individual slots in <b>Selected slot</b>.</li>
+      <li>Click <b>Light all slots</b> for a final check, then <b>Export</b>.</li>
+    </ol>
+  </section>
+</main>
+
+<script>
+const SHELVES = "ABCDEFGH".split("");
+const SLOTS = 5;
+const PALETTE = ["FF2020", "20FF40", "2060FF", "FFA000", "C040FF"];
+const STORE_KEY = "filamentRackMapper.v2";
+const OLD_STORE_KEY = "filamentRackMapper.v1";
+const RACK_COUNT = 3;
+const LEDS_PER_RACK = 300;
+
+// Layout guess for one rack: where its strip starts and how it zigzags.
+// Racks are daisy-chained: rack 1 runs up, rack 2 comes back down, rack 3 goes up again.
+const DEFAULT_LAYOUTS = [
+  { from: "bottom", firstDir: "rtl" },
+  { from: "top", firstDir: "ltr" },
+  { from: "bottom", firstDir: "ltr" }
+];
+function defaultLayout(r) {
+  return { first: r * LEDS_PER_RACK, count: LEDS_PER_RACK, ...DEFAULT_LAYOUTS[r] };
+}
+
+function shelvesFromLayout(l) {
+  const order = l.from === "bottom" ? SHELVES : [...SHELVES].reverse();
+  const per = l.count / SHELVES.length;
+  const out = {};
+  order.forEach((sh, i) => {
+    const start = l.first + Math.round(i * per), end = l.first + Math.round((i + 1) * per) - 1;
+    const dir = (i % 2 === 0) ? l.firstDir : (l.firstDir === "rtl" ? "ltr" : "rtl");
+    out[sh] = dir === "rtl" ? { left: end, right: start } : { left: start, right: end };
+  });
+  return out;
+}
+
+function defaultRacks() {
+  return Array.from({ length: RACK_COUNT }, (_, r) => {
+    const layout = defaultLayout(r);
+    return { layout, shelves: shelvesFromLayout(layout) };
+  });
+}
+
+function defaultState() {
+  return {
+    host: "wled.local", total: LEDS_PER_RACK, bri: 90,
+    curColor: "#ff2020", slotColor: "#ffffff",
+    defWidth: 3, cursor: 0, rack: 1, rackCount: 1,
+    racks: defaultRacks(), overrides: {}, selected: null
+  };
+}
+
+// Converts a single-rack (v1) save or export into rack 1 of the current state.
+function migrateV1(old, st) {
+  if (old.host) st.host = old.host;
+  if (old.defaultWidth || old.defWidth) st.defWidth = old.defaultWidth || old.defWidth;
+  if (old.shelves) st.racks[0].shelves = old.shelves;
+  st.overrides = {};
+  Object.entries(old.overrides || {}).forEach(([k, v]) => { st.overrides["1-" + k] = v; });
+  return st;
+}
+
+// True when this page is served by the Filament Locator app, which proxies WLED and stores the slot map.
+let serverMode = false;
+let hadSavedState = false;
+
+let state = defaultState();
+try {
+  const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+  hadSavedState = !!saved;
+  if (saved) {
+    if (saved.rackCount == null) saved.total = LEDS_PER_RACK;
+    state = Object.assign(defaultState(), saved);
+  } else {
+    const old = JSON.parse(localStorage.getItem(OLD_STORE_KEY) || "null");
+    if (old) state = migrateV1(old, defaultState());
+  }
+} catch (e) {}
+
+function save() {
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {}
+}
+
+const $ = id => document.getElementById(id);
+const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+const hex = c => c.replace("#", "").toUpperCase();
+const rackKeys = r => SHELVES.flatMap(sh => [1, 2, 3, 4, 5].map(k => `${r}-${sh}-${k}`));
+const activeRacks = () => state.racks.slice(0, state.rackCount);
+const allKeys = () => activeRacks().flatMap((_, i) => rackKeys(i + 1));
+
+function slotInfo(key) {
+  const [rStr, sh, kStr] = key.split("-");
+  const r = +rStr, k = +kStr;
+  const e = state.racks[r - 1].shelves[sh];
+  const o = state.overrides[key] || {};
+  const autoCenter = Math.round(e.left + (e.right - e.left) * (k - 0.5) / SLOTS);
+  const center = o.center ?? autoCenter;
+  const width = o.width ?? state.defWidth;
+  let lo = center - Math.floor((width - 1) / 2);
+  let hi = lo + width - 1;
+  lo = clamp(lo, 0, state.total - 1);
+  hi = clamp(hi, 0, state.total - 1);
+  return { key, r, sh, k, center, width, lo, hi, custom: o.center != null || o.width != null };
+}
+
+// ---- WLED communication (latest request wins; never more than one in flight) ----
+let inflight = false, pending = null;
+
+function baseUrl() {
+  return "http://" + state.host.trim().replace(/^https?:\/\//, "").replace(/\/+$/, "");
+}
+
+// WLED JSON API endpoint ("state" or "info"), direct or through the Filament Locator.
+function wledUrl(what) {
+  return serverMode ? `/api/wled/${what}` : `${baseUrl()}/json/${what}`;
+}
+
+function setConn(ok, msg) {
+  const el = $("conn");
+  el.className = "pill " + (ok ? "ok" : "bad");
+  el.textContent = ok ? "Connected" : "Can't reach WLED" + (msg ? ` (${msg})` : "");
+}
+
+async function send(body) {
+  pending = body;
+  if (inflight) return;
+  while (pending) {
+    const b = pending;
+    pending = null;
+    inflight = true;
+    const ctl = new AbortController();
+    const timer = setTimeout(() => ctl.abort(), 4000);
+    try {
+      const r = await fetch(wledUrl("state"), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(b), signal: ctl.signal
+      });
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      setConn(true);
+    } catch (e) {
+      setConn(false, e.name === "AbortError" ? "timed out" : e.message);
+    } finally {
+      clearTimeout(timer);
+      inflight = false;
+    }
+  }
+}
+
+function showRanges(ranges) {
+  const i = [0, state.total, "000000"];
+  ranges.forEach(r => i.push(r.lo, r.hi + 1, r.color));
+  send({ on: true, bri: state.bri, seg: { id: 0, fx: 0, i } });
+}
+
+const paletteRanges = keys => keys.map(key => {
+  const s = slotInfo(key);
+  return { lo: s.lo, hi: s.hi, color: PALETTE[s.k - 1] };
+});
+
+// What is currently shown on the strip
+let view = { type: "cursor" };
+
+function refreshLights() {
+  if (view.type === "cursor") {
+    showRanges([{ lo: state.cursor, hi: state.cursor, color: hex(state.curColor) }]);
+  } else if (view.type === "slot") {
+    const s = slotInfo(view.key);
+    showRanges([{ lo: s.lo, hi: s.hi, color: hex(state.slotColor) }]);
+  } else if (view.type === "shelf") {
+    showRanges(paletteRanges([1, 2, 3, 4, 5].map(k => `${view.r}-${view.sh}-${k}`)));
+  } else if (view.type === "rack") {
+    showRanges(paletteRanges(rackKeys(view.r)));
+  } else if (view.type === "all") {
+    showRanges(paletteRanges(allKeys()));
+  }
+}
+
+function setView(v) { view = v; refreshLights(); }
+
+// ---- Rendering ----
+function findOverlaps() {
+  const infos = allKeys().map(slotInfo);
+  const bad = new Set();
+  for (let a = 0; a < infos.length; a++)
+    for (let b = a + 1; b < infos.length; b++)
+      if (infos[a].lo <= infos[b].hi && infos[b].lo <= infos[a].hi) {
+        bad.add(infos[a].key); bad.add(infos[b].key);
+      }
+  return bad;
+}
+
+function render() {
+  $("host").value = state.host;
+  $("total").value = state.total;
+  $("bri").value = state.bri;
+  $("curColor").value = state.curColor;
+  $("slotColor").value = state.slotColor;
+  $("defWidth").value = state.defWidth;
+  $("cursor").value = state.cursor;
+  $("cursor").max = state.total - 1;
+
+  $("rackCount").value = state.rackCount;
+  if (state.rack > state.rackCount) state.rack = 1;
+  $("tabs").innerHTML = activeRacks().map((_, i) =>
+    `<button data-tab="${i + 1}" class="${state.rack === i + 1 ? "on" : ""}">Rack ${i + 1}</button>`).join("");
+
+  const r = state.rack;
+  const l = state.racks[r - 1].layout;
+  $("layout").innerHTML = `
+    <label>First LED <input type="number" data-layout="first" value="${l.first}" min="0"></label>
+    <label>LEDs <input type="number" data-layout="count" value="${l.count}" min="8"></label>
+    <label>Strip starts at
+      <select data-layout="from">
+        <option value="bottom" ${l.from === "bottom" ? "selected" : ""}>bottom (shelf A)</option>
+        <option value="top" ${l.from === "top" ? "selected" : ""}>top (shelf H)</option>
+      </select></label>
+    <label>First shelf runs
+      <select data-layout="firstDir">
+        <option value="rtl" ${l.firstDir === "rtl" ? "selected" : ""}>right → left</option>
+        <option value="ltr" ${l.firstDir === "ltr" ? "selected" : ""}>left → right</option>
+      </select></label>
+    <button data-applylayout="${r}">Apply layout guess</button>
+    <button data-lightrack="${r}">Light rack</button>`;
+
+  $("legend").innerHTML = PALETTE.map((c, i) => `<span><i style="background:#${c}"></i>Slot ${i + 1}</span>`).join("");
+
+  const overlaps = findOverlaps();
+  $("rack").innerHTML = [...SHELVES].reverse().map(sh => {
+    const e = state.racks[r - 1].shelves[sh];
+    const arrow = e.right > e.left ? "LED numbers count up →" : "← LED numbers count up";
+    const tiles = [1, 2, 3, 4, 5].map(k => {
+      const s = slotInfo(`${r}-${sh}-${k}`);
+      const cls = ["slot", state.selected === s.key ? "sel" : "", s.custom ? "custom" : "", overlaps.has(s.key) ? "overlap" : ""].join(" ");
+      const range = s.lo === s.hi ? `LED ${s.lo}` : `LEDs ${s.lo}–${s.hi}`;
+      return `<button class="${cls}" data-slot="${s.key}"><b>${s.key}</b><span>${range}</span><i class="dot" style="background:#${PALETTE[k - 1]}"></i></button>`;
+    }).join("");
+    return `<div class="shelf">
+      <div class="shelf-head">
+        <span class="shelf-name">${sh}</span><span class="dir">${arrow}</span>
+        <div class="edges">
+          <label>L <input type="number" data-edge="left" data-sh="${sh}" value="${e.left}" min="0"></label>
+          <button data-setedge="left" data-sh="${sh}">L = cursor</button>
+          <label>R <input type="number" data-edge="right" data-sh="${sh}" value="${e.right}" min="0"></label>
+          <button data-setedge="right" data-sh="${sh}">R = cursor</button>
+          <button data-lightshelf="${sh}">Light shelf</button>
+        </div>
+      </div>
+      <div class="slots">${tiles}</div>
+    </div>`;
+  }).join("");
+
+  if (state.selected) {
+    const s = slotInfo(state.selected);
+    $("noSel").classList.add("hidden");
+    $("selBox").classList.remove("hidden");
+    $("selName").textContent = s.key;
+    $("selRange").textContent = `LEDs ${s.lo}–${s.hi} · center ${s.center}` + (s.custom ? " · adjusted" : " · auto");
+    $("selWidth").textContent = s.width;
+  } else {
+    $("noSel").classList.remove("hidden");
+    $("selBox").classList.add("hidden");
+  }
+}
+
+function update(showView) {
+  save();
+  render();
+  if (showView) setView(showView); else refreshLights();
+}
+
+// ---- Events ----
+function moveCursor(n) {
+  state.cursor = clamp(n, 0, state.total - 1);
+  update({ type: "cursor" });
+}
+
+const curShelves = () => state.racks[state.rack - 1].shelves;
+
+document.addEventListener("click", ev => {
+  const t = ev.target.closest("button");
+  if (!t) return;
+  const d = t.dataset;
+
+  if (d.jog) return moveCursor(state.cursor + +d.jog);
+
+  if (d.tab) {
+    state.rack = +d.tab;
+    if (state.selected && slotInfo(state.selected).r !== state.rack) state.selected = null;
+    return update({ type: "rack", r: state.rack });
+  }
+
+  if (d.slot) {
+    state.selected = d.slot;
+    state.cursor = slotInfo(d.slot).center;
+    return update({ type: "slot", key: d.slot });
+  }
+
+  if (d.setedge) {
+    curShelves()[d.sh][d.setedge] = state.cursor;
+    return update({ type: "shelf", r: state.rack, sh: d.sh });
+  }
+
+  if (d.lightshelf) return setView({ type: "shelf", r: state.rack, sh: d.lightshelf });
+  if (d.lightrack) return setView({ type: "rack", r: +d.lightrack });
+
+  if (d.applylayout) {
+    const rk = state.racks[+d.applylayout - 1];
+    if (!confirm(`Replace all shelf edges on rack ${d.applylayout} with the layout guess?`)) return;
+    rk.shelves = shelvesFromLayout(rk.layout);
+    return update({ type: "rack", r: +d.applylayout });
+  }
+
+  if (d.sel && state.selected) {
+    const key = state.selected;
+    const s = slotInfo(key);
+    const o = state.overrides[key] || (state.overrides[key] = {});
+    const keys = allKeys();
+    const idx = keys.indexOf(key);
+    switch (d.sel) {
+      case "c-1": o.center = s.center - 1; break;
+      case "c+1": o.center = s.center + 1; break;
+      case "toCursor": {
+        const l = state.racks[s.r - 1].layout;
+        if ((state.cursor < l.first || state.cursor >= l.first + l.count) &&
+            !confirm(`LED ${state.cursor} isn't on rack ${s.r} (LEDs ${l.first}–${l.first + l.count - 1}). Move ${key} there anyway?`)) return;
+        o.center = state.cursor;
+        break;
+      }
+      case "w-1": o.width = Math.max(1, s.width - 1); break;
+      case "w+1": o.width = Math.min(20, s.width + 1); break;
+      case "auto": delete state.overrides[key]; break;
+      case "prev": state.selected = keys[(idx + keys.length - 1) % keys.length]; break;
+      case "next": state.selected = keys[(idx + 1) % keys.length]; break;
+    }
+    if (state.overrides[key] && Object.keys(state.overrides[key]).length === 0) delete state.overrides[key];
+    state.rack = slotInfo(state.selected).r;
+    return update({ type: "slot", key: state.selected });
+  }
+});
+
+document.addEventListener("change", ev => {
+  const t = ev.target;
+  if (t.dataset.edge) {
+    curShelves()[t.dataset.sh][t.dataset.edge] = clamp(parseInt(t.value) || 0, 0, state.total - 1);
+    update({ type: "shelf", r: state.rack, sh: t.dataset.sh });
+  } else if (t.dataset.layout) {
+    const l = state.racks[state.rack - 1].layout;
+    const f = t.dataset.layout;
+    l[f] = (f === "first" || f === "count") ? Math.max(0, parseInt(t.value) || 0) : t.value;
+    save();
+  }
+});
+
+$("cursor").addEventListener("change", e => moveCursor(parseInt(e.target.value) || 0));
+$("host").addEventListener("change", e => { state.host = e.target.value; save(); });
+$("total").addEventListener("change", e => {
+  state.total = clamp(parseInt(e.target.value) || 1, 1, 2048);
+  update();
+});
+$("bri").addEventListener("input", e => { state.bri = +e.target.value; save(); refreshLights(); });
+$("curColor").addEventListener("input", e => { state.curColor = e.target.value; save(); refreshLights(); });
+$("slotColor").addEventListener("input", e => { state.slotColor = e.target.value; save(); refreshLights(); });
+$("rackCount").addEventListener("change", e => {
+  state.rackCount = +e.target.value;
+  state.total = state.rackCount * LEDS_PER_RACK;
+  if (state.selected && slotInfo(state.selected).r > state.rackCount) state.selected = null;
+  update({ type: "all" });
+});
+$("defWidth").addEventListener("change", e => {
+  state.defWidth = clamp(parseInt(e.target.value) || 1, 1, 20);
+  update();
+});
+$("showAll").addEventListener("click", () => setView({ type: "all" }));
+$("off").addEventListener("click", () => send({ on: false }));
+$("release").addEventListener("click", () => send({ on: true, seg: { id: 0, frz: false } }));
+
+$("test").addEventListener("click", async () => {
+  $("info").textContent = "Checking…";
+  try {
+    const r = await fetch(wledUrl("info"), { signal: AbortSignal.timeout(5000) });
+    if (!r.ok) throw new Error();
+    const info = await r.json();
+    setConn(true);
+    let msg = `Found “${info.name}” — WLED ${info.ver}, ${info.leds.count} LEDs configured, IP ${info.ip}.`;
+    if (info.leds.count !== state.total) msg += ` Note: this page is set to ${state.total} LEDs.`;
+    $("info").textContent = msg;
+  } catch (e) {
+    setConn(false);
+    $("info").textContent = serverMode
+      ? "The Filament Locator couldn't reach WLED. Check WLED_HOST in its .env file."
+      : "Couldn't reach WLED. Check the host name, or try the controller's IP address instead.";
+  }
+});
+
+document.addEventListener("keydown", e => {
+  if (e.target.matches("input, textarea, select")) return;
+  const step = e.shiftKey ? 10 : 1;
+  if (e.key === "ArrowRight") { e.preventDefault(); moveCursor(state.cursor + step); }
+  else if (e.key === "ArrowLeft") { e.preventDefault(); moveCursor(state.cursor - step); }
+  else if (e.key === "Escape") send({ on: false });
+});
+
+function buildExport() {
+  return {
+    version: 2,
+    exported: new Date().toISOString(),
+    host: state.host,
+    totalLeds: state.total,
+    defaultWidth: state.defWidth,
+    rackCount: state.rackCount,
+    racks: activeRacks(),
+    overrides: state.overrides,
+    slots: allKeys().map(key => {
+      const s = slotInfo(key);
+      return { location: key, rack: s.r, shelf: s.sh, position: s.k, start: s.lo, end: s.hi };
+    })
+  };
+}
+
+$("export").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify(buildExport(), null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "filament-slots.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
+// Merge by rack: racks in the map replace those racks here; other racks are kept.
+function mergeMap(d, source, ask = true) {
+  if (d.version !== 2) {
+    migrateV1(d, state);
+    return update({ type: "all" });
+  }
+  const racks = (d.racks || []).slice(0, RACK_COUNT);
+  const names = racks.map((_, i) => i + 1).join(", ");
+  if (ask && !confirm(`Replace rack ${names} with the version in ${source}? Other racks are kept.`)) return;
+  racks.forEach((rk, i) => {
+    state.racks[i] = rk;
+    const prefix = `${i + 1}-`;
+    Object.keys(state.overrides).forEach(k => { if (k.startsWith(prefix)) delete state.overrides[k]; });
+    Object.entries(d.overrides || {}).forEach(([k, v]) => { if (k.startsWith(prefix)) state.overrides[k] = v; });
+  });
+  if (d.defaultWidth) state.defWidth = d.defaultWidth;
+  state.rackCount = Math.max(state.rackCount, racks.length);
+  state.total = Math.max(state.total, d.totalLeds || 0);
+  state.selected = null;
+  if (ask) update({ type: "all" }); else { save(); render(); }
+}
+
+$("importBtn").addEventListener("click", () => $("importFile").click());
+$("importFile").addEventListener("change", async e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    mergeMap(JSON.parse(await file.text()), "this file");
+  } catch (err) {
+    alert("That file couldn't be read as a slot map.");
+  }
+  e.target.value = "";
+});
+
+// Fetches the saved slot map: from the Filament Locator, or from the folder this page is served from.
+async function fetchSavedMap() {
+  const r = await fetch((serverMode ? "/api/slots" : "filament-slots.json") + "?t=" + Date.now());
+  if (!r.ok) throw new Error();
+  return r.json();
+}
+
+$("loadSaved").addEventListener("click", async () => {
+  try {
+    const d = await fetchSavedMap();
+    mergeMap(d, `the saved map from ${new Date(d.exported).toLocaleString()}`);
+  } catch (err) {
+    alert(serverMode ? "The Filament Locator doesn't have a slot map yet."
+                     : "Couldn't load filament-slots.json from the computer serving this page.");
+  }
+});
+
+$("saveServer").addEventListener("click", async () => {
+  const data = buildExport();
+  if (!confirm(`Save this map (${data.slots.length} slots) to the Filament Locator? It replaces the map the app uses now; the old one is kept as a backup.`)) return;
+  try {
+    const r = await fetch("/api/slots", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data)
+    });
+    const res = await r.json();
+    if (!r.ok) throw new Error(res.error);
+    $("saveNote").textContent = `Saved ${data.slots.length} slots to the Filament Locator at ${new Date().toLocaleTimeString()}.`;
+  } catch (e) {
+    alert("Couldn't save: " + (e.message || "no response"));
+  }
+});
+
+$("reset").addEventListener("click", () => {
+  if (!confirm("Reset all racks, shelf edges and slot adjustments?")) return;
+  const host = state.host;
+  state = defaultState();
+  state.host = host;
+  update({ type: "cursor" });
+});
+
+// Served by the Filament Locator? Then use its WLED proxy and slot storage.
+async function init() {
+  render();
+  try {
+    const r = await fetch("/api/status", { signal: AbortSignal.timeout(3000) });
+    serverMode = r.ok && "wled" in await r.json();
+  } catch (e) {}
+  if (!serverMode) return;
+  $("hostWrap").classList.add("hidden");
+  $("saveServer").classList.remove("hidden");
+  $("loadSaved").textContent = "Load map from Filament Locator";
+  $("saveNote").textContent = "Your work auto-saves in this browser. Save to Filament Locator updates the map the app uses.";
+  // First visit on this device: start from the map the app is already using.
+  if (!hadSavedState) {
+    try { mergeMap(await fetchSavedMap(), "", false); } catch (e) {}
+  }
+}
+
+init();
+</script>
+</body>
+</html>
