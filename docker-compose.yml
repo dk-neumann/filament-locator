@@ -1,0 +1,17 @@
+services:
+  filament-locator:
+    build: .
+    container_name: filament-locator
+    restart: unless-stopped
+    # Host networking lets the app reach Spoolman at localhost and WLED on the LAN.
+    network_mode: host
+    # Your own values go in .env (copy .env.example); these are the fallbacks.
+    environment:
+      - PORT=${PORT:-7920}
+      - SPOOLMAN_URL=${SPOOLMAN_URL:-http://localhost:7912}
+      - WLED_HOST=${WLED_HOST:-wled.local}
+      - AUTO_OFF_SECONDS=${AUTO_OFF_SECONDS:-120}
+      - BRIGHTNESS=${BRIGHTNESS:-150}
+      - LIGHT_COLOR=${LIGHT_COLOR:-filament}
+    volumes:
+      - ./data:/app/data

@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Filament Locator</title>
+<style>
+  :root {
+    --bg: #f5f4f0; --card: #ffffff; --ink: #1d1d1f; --muted: #6b6b72; --line: #e3e1dc;
+    --tile: #f1efea; --tile-hover: #e8e5de; --accent: #2f6fde; --accent-ink: #ffffff;
+    --lit: #fff4c7; --lit-line: #e0b400; --ok: #1f8a4c; --bad: #c0362c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #131315; --card: #1d1d20; --ink: #ececef; --muted: #9b9ba3; --line: #313136;
+      --tile: #26262a; --tile-hover: #2f2f34; --accent: #5b8ff0; --accent-ink: #0b1220;
+      --lit: #3d3410; --lit-line: #e0b400; --ok: #4cc47f; --bad: #ff6b5e;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink);
+    font: 16px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px 16px 90px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px; }
+  h1 { font-size: 22px; margin: 0; flex: 1; }
+  .status { font-size: 13px; color: var(--muted); display: flex; gap: 10px; }
+  .status .ok::before, .status .bad::before { content: "●"; margin-right: 4px; }
+  .status .ok::before { color: var(--ok); } .status .bad::before { color: var(--bad); }
+  button { font: inherit; color: var(--ink); background: var(--tile); border: 1px solid var(--line);
+    border-radius: 10px; padding: 8px 14px; cursor: pointer; }
+  button:hover { background: var(--tile-hover); }
+  button.primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; }
+  input[type=search], select { font: inherit; color: var(--ink); background: var(--card);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+  .toolbar { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+  .toolbar input[type=search] { flex: 1; min-width: 200px; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg button { border: none; border-radius: 0; background: var(--card); }
+  .seg button.on { background: var(--accent); color: var(--accent-ink); }
+  .check { display: inline-flex; gap: 6px; align-items: center; font-size: 14px; color: var(--muted); }
+  .list { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+  .spool { display: flex; gap: 12px; align-items: center; background: var(--card); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px; cursor: pointer; }
+  .spool:hover { border-color: var(--muted); }
+  .spool.lit { background: var(--lit); border-color: var(--lit-line); }
+  .swatch { width: 44px; height: 44px; border-radius: 50%; flex: none; border: 1px solid var(--line); }
+  .spool .body { flex: 1; min-width: 0; }
+  .spool .title { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .spool .sub { font-size: 13px; color: var(--muted); }
+  .loc { font-weight: 700; font-size: 15px; padding: 4px 8px; border-radius: 8px; background: var(--tile); white-space: nowrap; }
+  .loc.none { font-weight: 400; color: var(--muted); font-size: 13px; }
+  .assign { font-size: 13px; padding: 6px 10px; }
+  .empty { color: var(--muted); padding: 30px 0; text-align: center; }
+  .rack { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px; margin-bottom: 14px; }
+  .rack h2 { font-size: 15px; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+  .shelf { display: grid; grid-template-columns: 28px repeat(5, 1fr); gap: 8px; margin-bottom: 8px; align-items: stretch; }
+  .shelf .name { font-weight: 700; align-self: center; }
+  .cell { text-align: left; padding: 8px; border-radius: 10px; min-height: 64px; display: flex; flex-direction: column; gap: 4px; }
+  .cell .top { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+  .cell .dot { width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--line); flex: none; }
+  .cell .nm { font-size: 13px; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .cell.open .nm { color: var(--muted); }
+  .cell.lit { background: var(--lit); border-color: var(--lit-line); }
+  .bar { position: fixed; left: 0; right: 0; bottom: 0; background: var(--card); border-top: 1px solid var(--line);
+    padding: 10px 16px; display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  .bar .msg { font-size: 14px; color: var(--muted); }
+  dialog { border: 1px solid var(--line); border-radius: 14px; background: var(--card); color: var(--ink); padding: 18px; width: min(420px, 92vw); }
+  dialog::backdrop { background: rgba(0,0,0,.4); }
+  dialog h3 { margin: 0 0 6px; }
+  dialog select { width: 100%; margin: 12px 0; }
+  dialog .row { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Filament Locator</h1>
+    <div class="status"><span id="stSpoolman">Spoolman</span><span id="stWled">LEDs</span></div>
+  </header>
+
+  <div class="toolbar">
+    <input type="search" id="q" placeholder="Search name, color, material, vendor, slot…" autocomplete="off">
+    <select id="vendor"><option value="">All brands</option></select>
+    <select id="material"><option value="">All materials</option></select>
+    <div class="seg"><button data-view="list" class="on">Spools</button><button data-view="rack">Rack</button></div>
+  </div>
+  <div class="toolbar" id="listOpts">
+    <label class="check"><input type="checkbox" id="unassigned"> No slot only</label>
+    <button id="lightMatches">Light all matches</button>
+    <button id="refresh">Refresh</button>
+  </div>
+
+  <div id="listView" class="list"></div>
+  <div id="rackView" class="hidden"></div>
+</main>
+
+<div class="bar">
+  <span class="msg" id="msg">Tap a spool to light its slot.</span>
+  <button id="off" class="primary">Lights off</button>
+</div>
+
+<dialog id="assignDlg">
+  <h3 id="dlgTitle">Assign slot</h3>
+  <div class="sub" id="dlgSub" style="color:var(--muted);font-size:14px"></div>
+  <select id="dlgSelect"></select>
+  <div class="row">
+    <button id="dlgCancel">Cancel</button>
+    <button id="dlgSave" class="primary">Save</button>
+  </div>
+</dialog>
+
+<script>
+let spools = [], slots = [], view = "list", litLocs = new Set(), offTimer = null;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const slotSet = () => new Set(slots.map(s => s.location));
+
+function swatch(sp) {
+  const multi = sp.multiColors ? sp.multiColors.split(",").map(h => "#" + h.trim().replace("#", "")) : [];
+  if (multi.length > 1) return `background: linear-gradient(135deg, ${multi.join(", ")})`;
+  return `background: ${sp.color ? "#" + sp.color.replace("#", "") : "var(--tile)"}`;
+}
+
+function spoolTitle(sp) {
+  // Many filament names already start with the brand ("Elegoo Matte PLA"); don't repeat it.
+  const vendor = sp.vendor && !sp.name.toLowerCase().startsWith(sp.vendor.toLowerCase()) ? sp.vendor : "";
+  return [vendor, sp.name].filter(Boolean).join(" ") || `Spool #${sp.id}`;
+}
+
+function setMsg(text) { $("msg").textContent = text; }
+
+async function api(path, body) {
+  const r = await fetch(path, body === undefined ? {} : {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+
+async function load() {
+  try {
+    const d = await api("/api/data");
+    spools = d.spools;
+    slots = d.slots;
+    fillSelect("vendor", "All brands", spools.map(s => s.vendor));
+    fillSelect("material", "All materials", spools.map(s => s.material));
+    render();
+  } catch (e) {
+    $("listView").innerHTML = `<div class="empty">Couldn't load spools: ${esc(e.message)}</div>`;
+  }
+  status();
+}
+
+// Fills a dropdown with the distinct values, keeping the current choice.
+function fillSelect(id, allLabel, values) {
+  const cur = $(id).value;
+  const opts = [...new Set(values.filter(Boolean))].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  $(id).innerHTML = `<option value="">${allLabel}</option>` + opts.map(v => `<option ${v === cur ? "selected" : ""}>${esc(v)}</option>`).join("");
+}
+
+async function status() {
+  try {
+    const s = await api("/api/status");
+    $("stSpoolman").className = s.spoolman ? "ok" : "bad";
+    $("stWled").className = s.wled ? "ok" : "bad";
+  } catch { $("stSpoolman").className = $("stWled").className = "bad"; }
+}
+
+function filtered() {
+  const q = $("q").value.trim().toLowerCase();
+  const mat = $("material").value;
+  const vendor = $("vendor").value;
+  const onlyOpen = $("unassigned").checked;
+  return spools.filter(sp => {
+    if (mat && sp.material !== mat) return false;
+    if (vendor && sp.vendor !== vendor) return false;
+    if (onlyOpen && sp.location) return false;
+    if (!q) return true;
+    const hay = [sp.id, sp.vendor, sp.name, sp.material, sp.color, sp.location, sp.comment].join(" ").toLowerCase();
+    return q.split(/\s+/).every(w => hay.includes(w));
+  }).sort((a, b) => (a.location || "~").localeCompare(b.location || "~", undefined, { numeric: true }) || a.id - b.id);
+}
+
+function render() {
+  $("listView").classList.toggle("hidden", view !== "list");
+  $("rackView").classList.toggle("hidden", view !== "rack");
+  $("listOpts").classList.toggle("hidden", view !== "list");
+  view === "list" ? renderList() : renderRack();
+}
+
+function renderList() {
+  const list = filtered();
+  const valid = slotSet();
+  if (!list.length) { $("listView").innerHTML = `<div class="empty">No spools match.</div>`; return; }
+  $("listView").innerHTML = list.map(sp => {
+    const locHtml = sp.location
+      ? `<span class="loc" title="${valid.has(sp.location) ? "" : "Not on the slot map"}">${esc(sp.location)}${valid.has(sp.location) ? "" : " ?"}</span>`
+      : `<span class="loc none">No slot</span>`;
+    const sub = [sp.material, sp.remaining != null ? `${sp.remaining} g left` : "", `#${sp.id}`].filter(Boolean).join(" · ");
+    return `<div class="spool ${litLocs.has(sp.location) ? "lit" : ""}" data-id="${sp.id}">
+      <div class="swatch" style="${swatch(sp)}"></div>
+      <div class="body"><div class="title">${esc(spoolTitle(sp))}</div><div class="sub">${esc(sub)}</div></div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px">
+        ${locHtml}<button class="assign" data-assign="${sp.id}">${sp.location ? "Move" : "Assign"}</button>
+      </div>
+    </div>`;
+  }).join("");
+}
+
+function renderRack() {
+  const byLoc = new Map();
+  spools.forEach(sp => { if (sp.location) byLoc.set(sp.location, sp); });
+  const racks = [...new Set(slots.map(s => s.rack))].sort((a, b) => a - b);
+  $("rackView").innerHTML = racks.map(r => {
+    const shelves = [...new Set(slots.filter(s => s.rack === r).map(s => s.shelf))].sort().reverse();
+    const rows = shelves.map(sh => {
+      const cells = slots.filter(s => s.rack === r && s.shelf === sh).sort((a, b) => a.position - b.position).map(s => {
+        const sp = byLoc.get(s.location);
+        return `<button class="cell ${sp ? "" : "open"} ${litLocs.has(s.location) ? "lit" : ""}" data-loc="${s.location}">
+          <span class="top">${sp ? `<span class="dot" style="${swatch(sp)}"></span>` : ""}${esc(s.location)}</span>
+          <span class="nm">${sp ? esc(spoolTitle(sp)) + (sp.material ? " · " + esc(sp.material) : "") : "empty"}</span>
+        </button>`;
+      }).join("");
+      return `<div class="shelf"><span class="name">${sh}</span>${cells}</div>`;
+    }).join("");
+    return `<section class="rack"><h2>Rack ${r}</h2>${rows}</section>`;
+  }).join("");
+}
+
+async function light(items, label) {
+  try {
+    const d = await api("/api/locate", { items });
+    litLocs = new Set(d.lit);
+    setMsg(`Lit ${label}` + (d.autoOffSeconds ? ` — turns off in ${Math.round(d.autoOffSeconds / 60 * 10) / 10} min` : ""));
+    clearTimeout(offTimer);
+    if (d.autoOffSeconds) offTimer = setTimeout(() => { litLocs.clear(); setMsg("Lights turned off."); render(); }, d.autoOffSeconds * 1000);
+  } catch (e) {
+    setMsg("Couldn't light it: " + e.message);
+  }
+  render();
+}
+
+function lightSpool(sp) {
+  if (!sp.location) return setMsg(`${spoolTitle(sp)} has no slot yet. Tap Assign to give it one.`);
+  if (!slotSet().has(sp.location)) return setMsg(`“${sp.location}” isn't a slot on the rack map.`);
+  light([{ location: sp.location, color: sp.color }], `${sp.location} · ${spoolTitle(sp)}`);
+}
+
+// ---- Assign dialog ----
+let assigning = null;
+
+function openAssign(sp) {
+  assigning = sp;
+  const byLoc = new Map();
+  spools.forEach(s => { if (s.location) byLoc.set(s.location, s); });
+  $("dlgTitle").textContent = spoolTitle(sp);
+  $("dlgSub").textContent = [sp.material, sp.location ? `now in ${sp.location}` : "no slot yet"].filter(Boolean).join(" · ");
+  const opts = [`<option value="">— No slot —</option>`].concat(slots.map(s => {
+    const occ = byLoc.get(s.location);
+    const label = occ && occ.id !== sp.id ? `${s.location} — has ${spoolTitle(occ)}` : `${s.location}${occ ? " (current)" : " — empty"}`;
+    return `<option value="${s.location}" ${s.location === sp.location ? "selected" : ""}>${esc(label)}</option>`;
+  }));
+  $("dlgSelect").innerHTML = opts.join("");
+  if (!sp.location) {
+    const firstOpen = slots.find(s => !byLoc.has(s.location));
+    if (firstOpen) $("dlgSelect").value = firstOpen.location;
+  }
+  $("assignDlg").showModal();
+}
+
+$("dlgCancel").onclick = () => $("assignDlg").close();
+$("dlgSave").onclick = async () => {
+  const loc = $("dlgSelect").value;
+  const occ = spools.find(s => s.location === loc && s.id !== assigning.id && loc);
+  if (occ && !confirm(`${loc} currently holds ${spoolTitle(occ)}. Remove it from that slot and put ${spoolTitle(assigning)} there?`)) return;
+  try {
+    await api(`/api/spools/${assigning.id}/location`, { location: loc, clearOther: !!occ });
+    $("assignDlg").close();
+    setMsg(loc ? `${spoolTitle(assigning)} → ${loc}` : `${spoolTitle(assigning)} removed from its slot`);
+    await load();
+    if (loc) lightSpool(spools.find(s => s.id === assigning.id));
+  } catch (e) {
+    alert("Couldn't save: " + e.message);
+  }
+};
+
+// ---- Events ----
+$("listView").addEventListener("click", e => {
+  const a = e.target.closest("[data-assign]");
+  if (a) return openAssign(spools.find(s => s.id === +a.dataset.assign));
+  const card = e.target.closest(".spool");
+  if (card) lightSpool(spools.find(s => s.id === +card.dataset.id));
+});
+
+$("rackView").addEventListener("click", e => {
+  const c = e.target.closest("[data-loc]");
+  if (!c) return;
+  const sp = spools.find(s => s.location === c.dataset.loc);
+  light([{ location: c.dataset.loc, color: sp ? sp.color : "FFFFFF" }], c.dataset.loc + (sp ? ` · ${spoolTitle(sp)}` : " (empty)"));
+});
+
+document.querySelectorAll("[data-view]").forEach(b => b.onclick = () => {
+  view = b.dataset.view;
+  document.querySelectorAll("[data-view]").forEach(x => x.classList.toggle("on", x === b));
+  render();
+});
+
+$("q").addEventListener("input", render);
+$("material").addEventListener("change", render);
+$("vendor").addEventListener("change", render);
+$("unassigned").addEventListener("change", render);
+$("refresh").onclick = load;
+
+$("lightMatches").onclick = () => {
+  const valid = slotSet();
+  const items = filtered().filter(sp => valid.has(sp.location)).map(sp => ({ location: sp.location, color: sp.color }));
+  if (!items.length) return setMsg("None of the matching spools have a slot.");
+  light(items, `${items.length} spool${items.length > 1 ? "s" : ""}`);
+};
+
+$("off").onclick = async () => {
+  try { await api("/api/off", {}); litLocs.clear(); clearTimeout(offTimer); setMsg("Lights off."); render(); }
+  catch (e) { setMsg("Couldn't reach the LEDs: " + e.message); }
+};
+
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>

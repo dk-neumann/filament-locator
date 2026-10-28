@@ -1,0 +1,375 @@
+{
+  "version": 2,
+  "exported": "2026-01-01T00:00:00.000Z",
+  "host": "wled.local",
+  "totalLeds": 300,
+  "defaultWidth": 3,
+  "rackCount": 1,
+  "racks": [
+    {
+      "layout": {
+        "first": 0,
+        "count": 300,
+        "from": "bottom",
+        "firstDir": "rtl"
+      },
+      "shelves": {
+        "A": {
+          "left": 37,
+          "right": 0
+        },
+        "B": {
+          "left": 38,
+          "right": 74
+        },
+        "C": {
+          "left": 112,
+          "right": 75
+        },
+        "D": {
+          "left": 113,
+          "right": 149
+        },
+        "E": {
+          "left": 187,
+          "right": 150
+        },
+        "F": {
+          "left": 188,
+          "right": 224
+        },
+        "G": {
+          "left": 262,
+          "right": 225
+        },
+        "H": {
+          "left": 263,
+          "right": 299
+        }
+      }
+    }
+  ],
+  "overrides": {},
+  "slots": [
+    {
+      "location": "1-A-1",
+      "rack": 1,
+      "shelf": "A",
+      "position": 1,
+      "start": 32,
+      "end": 34
+    },
+    {
+      "location": "1-A-2",
+      "rack": 1,
+      "shelf": "A",
+      "position": 2,
+      "start": 25,
+      "end": 27
+    },
+    {
+      "location": "1-A-3",
+      "rack": 1,
+      "shelf": "A",
+      "position": 3,
+      "start": 18,
+      "end": 20
+    },
+    {
+      "location": "1-A-4",
+      "rack": 1,
+      "shelf": "A",
+      "position": 4,
+      "start": 10,
+      "end": 12
+    },
+    {
+      "location": "1-A-5",
+      "rack": 1,
+      "shelf": "A",
+      "position": 5,
+      "start": 3,
+      "end": 5
+    },
+    {
+      "location": "1-B-1",
+      "rack": 1,
+      "shelf": "B",
+      "position": 1,
+      "start": 41,
+      "end": 43
+    },
+    {
+      "location": "1-B-2",
+      "rack": 1,
+      "shelf": "B",
+      "position": 2,
+      "start": 48,
+      "end": 50
+    },
+    {
+      "location": "1-B-3",
+      "rack": 1,
+      "shelf": "B",
+      "position": 3,
+      "start": 55,
+      "end": 57
+    },
+    {
+      "location": "1-B-4",
+      "rack": 1,
+      "shelf": "B",
+      "position": 4,
+      "start": 62,
+      "end": 64
+    },
+    {
+      "location": "1-B-5",
+      "rack": 1,
+      "shelf": "B",
+      "position": 5,
+      "start": 69,
+      "end": 71
+    },
+    {
+      "location": "1-C-1",
+      "rack": 1,
+      "shelf": "C",
+      "position": 1,
+      "start": 107,
+      "end": 109
+    },
+    {
+      "location": "1-C-2",
+      "rack": 1,
+      "shelf": "C",
+      "position": 2,
+      "start": 100,
+      "end": 102
+    },
+    {
+      "location": "1-C-3",
+      "rack": 1,
+      "shelf": "C",
+      "position": 3,
+      "start": 93,
+      "end": 95
+    },
+    {
+      "location": "1-C-4",
+      "rack": 1,
+      "shelf": "C",
+      "position": 4,
+      "start": 85,
+      "end": 87
+    },
+    {
+      "location": "1-C-5",
+      "rack": 1,
+      "shelf": "C",
+      "position": 5,
+      "start": 78,
+      "end": 80
+    },
+    {
+      "location": "1-D-1",
+      "rack": 1,
+      "shelf": "D",
+      "position": 1,
+      "start": 116,
+      "end": 118
+    },
+    {
+      "location": "1-D-2",
+      "rack": 1,
+      "shelf": "D",
+      "position": 2,
+      "start": 123,
+      "end": 125
+    },
+    {
+      "location": "1-D-3",
+      "rack": 1,
+      "shelf": "D",
+      "position": 3,
+      "start": 130,
+      "end": 132
+    },
+    {
+      "location": "1-D-4",
+      "rack": 1,
+      "shelf": "D",
+      "position": 4,
+      "start": 137,
+      "end": 139
+    },
+    {
+      "location": "1-D-5",
+      "rack": 1,
+      "shelf": "D",
+      "position": 5,
+      "start": 144,
+      "end": 146
+    },
+    {
+      "location": "1-E-1",
+      "rack": 1,
+      "shelf": "E",
+      "position": 1,
+      "start": 182,
+      "end": 184
+    },
+    {
+      "location": "1-E-2",
+      "rack": 1,
+      "shelf": "E",
+      "position": 2,
+      "start": 175,
+      "end": 177
+    },
+    {
+      "location": "1-E-3",
+      "rack": 1,
+      "shelf": "E",
+      "position": 3,
+      "start": 168,
+      "end": 170
+    },
+    {
+      "location": "1-E-4",
+      "rack": 1,
+      "shelf": "E",
+      "position": 4,
+      "start": 160,
+      "end": 162
+    },
+    {
+      "location": "1-E-5",
+      "rack": 1,
+      "shelf": "E",
+      "position": 5,
+      "start": 153,
+      "end": 155
+    },
+    {
+      "location": "1-F-1",
+      "rack": 1,
+      "shelf": "F",
+      "position": 1,
+      "start": 191,
+      "end": 193
+    },
+    {
+      "location": "1-F-2",
+      "rack": 1,
+      "shelf": "F",
+      "position": 2,
+      "start": 198,
+      "end": 200
+    },
+    {
+      "location": "1-F-3",
+      "rack": 1,
+      "shelf": "F",
+      "position": 3,
+      "start": 205,
+      "end": 207
+    },
+    {
+      "location": "1-F-4",
+      "rack": 1,
+      "shelf": "F",
+      "position": 4,
+      "start": 212,
+      "end": 214
+    },
+    {
+      "location": "1-F-5",
+      "rack": 1,
+      "shelf": "F",
+      "position": 5,
+      "start": 219,
+      "end": 221
+    },
+    {
+      "location": "1-G-1",
+      "rack": 1,
+      "shelf": "G",
+      "position": 1,
+      "start": 257,
+      "end": 259
+    },
+    {
+      "location": "1-G-2",
+      "rack": 1,
+      "shelf": "G",
+      "position": 2,
+      "start": 250,
+      "end": 252
+    },
+    {
+      "location": "1-G-3",
+      "rack": 1,
+      "shelf": "G",
+      "position": 3,
+      "start": 243,
+      "end": 245
+    },
+    {
+      "location": "1-G-4",
+      "rack": 1,
+      "shelf": "G",
+      "position": 4,
+      "start": 235,
+      "end": 237
+    },
+    {
+      "location": "1-G-5",
+      "rack": 1,
+      "shelf": "G",
+      "position": 5,
+      "start": 228,
+      "end": 230
+    },
+    {
+      "location": "1-H-1",
+      "rack": 1,
+      "shelf": "H",
+      "position": 1,
+      "start": 266,
+      "end": 268
+    },
+    {
+      "location": "1-H-2",
+      "rack": 1,
+      "shelf": "H",
+      "position": 2,
+      "start": 273,
+      "end": 275
+    },
+    {
+      "location": "1-H-3",
+      "rack": 1,
+      "shelf": "H",
+      "position": 3,
+      "start": 280,
+      "end": 282
+    },
+    {
+      "location": "1-H-4",
+      "rack": 1,
+      "shelf": "H",
+      "position": 4,
+      "start": 287,
+      "end": 289
+    },
+    {
+      "location": "1-H-5",
+      "rack": 1,
+      "shelf": "H",
+      "position": 5,
+      "start": 294,
+      "end": 296
+    }
+  ]
+}
